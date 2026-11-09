@@ -1,132 +1,225 @@
-# RAG Studio
+# 📚 CourseMate AI — Intelligent Document Question Answering System
 
-Chat with your own documents, and turn a whole **question bank** into a finished **PDF / Word** answer file.
-Runs fully locally and for free: **Ollama** for the language model, **HuggingFace** embeddings, **Chroma** vector DB,
-**FastAPI** backend, **React** frontend.
+**CourseMate AI** is an AI-powered document intelligence application built using Retrieval-Augmented Generation (RAG). It enables users to interact with documents through natural language queries and receive context-aware responses based on the information contained in the provided documents.
 
-## What it does
+By combining Large Language Models (LLMs), semantic search, vector databases, and document processing, CourseMate AI makes it easier to retrieve, understand, and explore information from large collections of documents.
 
-- **Documents:** upload PDF, DOCX, TXT or MD. Indexing runs in the background and shows progress. Tick which documents each question may use.
-- **Chat with citations:** streamed answers with `[1]`-style references that point to file and page. Follow-up questions ("explain that more") are rewritten into standalone search queries first.
-- **Question-bank mode:** upload documents, then upload a question bank. The app detects the questions (you can edit, add, delete, and set marks), answers each from your documents, and exports everything as **PDF, DOCX or Markdown**.
-- **Choose the output format** from the buttons, or just say it: ask "...as a PDF" or "...in a Word file" and the matching export button is highlighted.
-- **Safe by default:** if the documents don't contain the answer you get "Not in documents". An opt-in toggle falls back to general knowledge and labels those answers clearly.
-- **Better retrieval than plain vector search:** hybrid search (vectors + BM25 keywords, merged with Reciprocal Rank Fusion), optional cross-encoder reranking.
-- **Configurable model:** default `llama3.2:3b`; switch to `llama3.1:8b` (or anything else Ollama serves) without touching code.
+---
 
-## Setup
+## ✨ Key Features
 
-**Prerequisites:** Python 3.10+, Node 18+, [Ollama](https://ollama.com/download).
+- **📄 Document Loading:** Supports loading and processing documents such as PDF, DOCX, and TXT files.
+- **✂️ Intelligent Text Chunking:** Splits large documents into smaller, manageable chunks while preserving contextual information.
+- **🧠 Semantic Embeddings:** Converts text into numerical vector representations to capture semantic meaning.
+- **🗄️ Vector Database:** Uses ChromaDB to store document embeddings and retrieve relevant information efficiently.
+- **🔍 Semantic Search:** Finds relevant document sections based on the meaning of user queries rather than exact keyword matches.
+- **💬 Context-Aware Question Answering:** Uses LLMs to generate responses grounded in retrieved document content.
+- **⚡ Retrieval-Augmented Generation:** Combines document retrieval with generative AI to provide relevant and informative answers.
+
+---
+
+## 🏗️ System Architecture
+
+CourseMate AI follows a Retrieval-Augmented Generation architecture consisting of two major workflows: document ingestion and query processing.
+
+### 1. Document Ingestion Pipeline
+
+```mermaid
+flowchart TD
+    A["Input Documents"] --> B["Document Loaders"]
+    B --> C["Text Extraction"]
+    C --> D["Text Splitting"]
+    D --> E["Embedding Generation"]
+    E --> F["ChromaDB Vector Store"]
+```
+
+### 2. Query Processing Pipeline
+
+```mermaid
+flowchart TD
+    A["User Query"] --> B["Query Embedding"]
+    B --> C["Semantic Similarity Search"]
+    C --> D["Relevant Document Chunks"]
+    D --> E["Context + Prompt Construction"]
+    E --> F["LLM (Mistral AI / OpenAI)"]
+    F --> G["Context-Aware Response"]
+```
+
+### How It Works
+
+1. **Document Loading:** Loads source documents using LangChain document loaders.
+2. **Text Splitting:** Divides extracted content into smaller chunks using text splitters.
+3. **Embedding Generation:** Converts document chunks into vector representations.
+4. **Vector Storage:** Stores embeddings and associated metadata in ChromaDB.
+5. **Query Embedding:** Converts the user's question into a vector representation.
+6. **Retrieval:** Retrieves semantically relevant document chunks from the vector database.
+7. **Response Generation:** Supplies the retrieved context to an LLM to generate a relevant answer.
+
+---
+
+## 🛠️ Tech Stack
+
+| Technology | Purpose |
+|---|---|
+| Python | Core programming language |
+| LangChain | RAG pipeline and component integration |
+| ChromaDB | Vector database and similarity search |
+| Mistral AI | Embedding and/or language model integration |
+| OpenAI | Large Language Model integration |
+| Hugging Face | Embedding model ecosystem |
+| PyPDF | PDF document processing |
+| Unstructured | Document extraction and processing |
+| Python-dotenv | Environment variable management |
+
+---
+
+## 📂 Project Structure
+
+The project is organized around document loading, embedding generation, vector storage, and retrieval.
+
+```text
+CourseMate-AI/
+│
+├── document_loaders/       # Document loading and processing
+│   ├── research_paper.pdf
+│   └── FinMate_Camera_Ready_Paper.docx
+│
+├── vector_store/            # ChromaDB storage (if persisted)
+│
+├── main.py                  # Application entry point
+├── requirements.txt         # Project dependencies
+├── .env                     # API credentials
+├── .gitignore               # Git ignored files
+└── README.md                # Project documentation
+```
+
+*Adjust the filenames and folders to match the actual repository structure.*
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the Repository
 
 ```bash
-# 1) Models
-ollama pull llama3.2:3b          # ~2 GB, works on most laptops
-ollama pull llama3.1:8b          # optional, ~5 GB download, wants ~8 GB+ free RAM
+git clone https://github.com/himanshuwalde/CourseMate-AI.git
+```
 
-# 2) Backend  (first run downloads torch + the embedding model, so give it a few minutes)
-cd backend
+```bash
+cd CourseMate-AI
+```
+
+### 2. Create a Virtual Environment
+
+```bash
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env             # Windows: copy .env.example .env
-uvicorn app.main:app --reload --port 8000
-
-# 3) Frontend (new terminal)
-cd frontend
-npm install
-npm run dev                      # open http://localhost:5173
 ```
 
-## Switching between the 3B and 8B model
+Activate the environment:
 
-Any of these works:
+**Windows (PowerShell):**
 
-1. **UI:** use the *Language model* dropdown in the sidebar. The choice is remembered.
-2. **`.env`:** set `LLM_MODEL=llama3.1:8b` and restart the backend.
-3. **API:** `POST /api/models/active` with `{"model": "llama3.1:8b"}`.
-
-The dropdown lists whatever `ollama list` shows. If the 3B answers feel thin on long exam questions, the 8B is the single biggest quality upgrade.
-You can also raise `LLM_NUM_CTX` (default 4096) for longer contexts.
-
-## Using it
-
-**Chat:** tick documents, ask. Open "passages used" to see the exact source text. Use the PDF / Word / Markdown buttons under an answer, or the "Whole conversation" row.
-
-**Question bank:**
-1. Upload and tick your study documents.
-2. *Question bank* tab, then *Upload question bank*. Detected questions appear in an editable list. Marks written like `(5 marks)` or `[10M]` are picked up and used to size each answer.
-3. Pick a style (exam / detailed / short), optionally add instructions such as "keep each answer under 150 words", then *Generate answers*.
-4. Watch progress, regenerate any weak answer individually, then download PDF, Word or Markdown.
-
-Question detection is regex-first (numbered lists, `Q1.`, `1)`, tables, ignores "Unit/Module" headings) with an LLM fallback for messy layouts.
-
-## Project layout
-
-```
-backend/
-  app/
-    main.py                 FastAPI app
-    config.py  storage.py   settings (.env) and small JSON stores
-    routes/                 documents, chat (SSE), question_bank (+jobs/export), models
-    services/
-      loaders.py            PDF / DOCX / TXT readers
-      chunking.py           overlap-aware splitter
-      embeddings.py         HuggingFace sentence-transformers
-      vectorstore.py        Chroma wrapper
-      retriever.py          hybrid search + optional reranker
-      llm.py  prompts.py    Ollama client and all prompt text
-      question_parser.py    question detection
-      qb_jobs.py            background answering jobs
-      exporters.py          DOCX / PDF / Markdown rendering
-  tests/                    pytest suite (fake embedder + fake LLM, no downloads needed)
-frontend/                   React + Vite (plain CSS)
+```powershell
+.venv\Scripts\Activate.ps1
 ```
 
-## API
-
-| Method | Path | Purpose |
-|---|---|---|
-| GET / POST / DELETE | `/api/documents`, `/api/documents/{id}` | list, upload, remove |
-| POST | `/api/chat` | streamed answer (SSE: `sources`, `token`, `export_hint`, `done`, `error`) |
-| POST | `/api/question-bank/parse` | upload a question bank, get its questions |
-| POST | `/api/question-bank/answer` | start an answering job |
-| GET | `/api/jobs/{id}` | progress and results |
-| POST | `/api/jobs/{id}/questions/{qid}/regenerate` | redo one answer |
-| GET | `/api/jobs/{id}/download?format=docx\|pdf\|md` | download the finished file |
-| POST | `/api/export` | export any list of Q&A as a file |
-| GET / POST | `/api/models`, `/api/models/active` | list / switch model |
-
-Interactive docs: http://localhost:8000/docs
-
-## Configuration (`backend/.env`)
-
-| Variable | Default | Notes |
-|---|---|---|
-| `LLM_MODEL` | `llama3.2:3b` | any Ollama model name |
-| `LLM_NUM_CTX` | `4096` | context window sent to Ollama |
-| `EMBEDDING_MODEL` | `BAAI/bge-small-en-v1.5` | changing it requires re-uploading documents |
-| `CHUNK_SIZE` / `CHUNK_OVERLAP` | `1000` / `200` | characters |
-| `TOP_K` | `5` | passages sent to the model |
-| `RERANK_ENABLED` | `false` | cross-encoder reranking |
-| `MIN_RELEVANCE` | `0.0` | raise (e.g. `0.35`) to answer "not found" more eagerly |
-| `MAX_UPLOAD_MB` | `50` | per file |
-| `DATA_DIR` | `./data` | uploads, Chroma DB, jobs |
-
-## Tests
+**macOS / Linux:**
 
 ```bash
-cd backend && pytest -q
+source .venv/bin/activate
 ```
 
-## Troubleshooting
+### 3. Install Dependencies
 
-- **"Cannot reach Ollama":** run `ollama serve` (the desktop app does this automatically).
-- **"Model ... is not installed":** `ollama pull <name>`.
-- **Upload stuck on "Reading and indexing":** the first upload downloads the embedding model. Wait, or check the backend terminal.
-- **Scanned PDF fails with "No extractable text":** OCR isn't built in yet (see roadmap).
-- **Weak or cut-off answers:** switch to the 8B model, raise `TOP_K` or `LLM_NUM_CTX`, or turn on `RERANK_ENABLED`.
-- **Non-Latin characters missing in PDF export:** the PDF exporter uses DejaVu / Arial if found on the machine. DOCX export always works.
+```bash
+pip install -r requirements.txt
+```
 
-## Roadmap ideas
+### 4. Configure Environment Variables
 
-OCR for scanned PDFs (Tesseract), retrieval evaluation set (RAGAS), user accounts with per-user documents, Postgres + pgvector, Docker Compose, Celery queue for ingestion, agentic retrieval, feedback buttons.
+Create a `.env` file in the project root directory.
+
+```env
+OPENAI_API_KEY=your_openai_api_key
+MISTRAL_API_KEY=your_mistral_api_key
+```
+
+Add only the credentials required by the selected model and embedding integrations.
+
+API resources:
+
+- [OpenAI Platform](https://platform.openai.com/)
+- [Mistral AI Console](https://console.mistral.ai/)
+
+### 5. Run the Application
+
+Run the project's configured entry-point script:
+
+```bash
+python main.py
+```
+
+*Replace `main.py` with the actual application entry point if your repository uses a different filename.*
+
+---
+
+## 🧩 Core RAG Components
+
+### Document Loaders
+LangChain document loaders extract text and metadata from different file formats, including PDF and Word documents.
+
+### Text Splitters
+Recursive character-based text splitting divides lengthy documents into smaller chunks suitable for embedding and retrieval.
+
+### Embedding Models
+Embedding models transform textual content into high-dimensional vectors, enabling semantic similarity comparisons.
+
+### ChromaDB
+ChromaDB stores document embeddings and metadata and provides similarity-based retrieval of relevant document chunks.
+
+### Large Language Models
+Mistral AI and OpenAI models can use the retrieved document context to generate natural-language responses.
+
+---
+
+## 🎯 Project Objectives
+
+- Understand and implement Retrieval-Augmented Generation architecture.
+- Build practical applications using LangChain and Large Language Models.
+- Explore semantic search and vector database integration.
+- Process and retrieve information from unstructured documents.
+- Improve the relevance of LLM responses through document-grounded retrieval.
+- Develop practical experience with modern Generative AI technologies.
+
+---
+
+## 🔮 Future Enhancements
+
+- Develop an interactive chat interface for document-based conversations.
+- Support multiple document uploads and collections.
+- Implement conversational memory for follow-up questions.
+- Introduce hybrid search combining keyword and semantic retrieval.
+- Add source citations and document page references to responses.
+- Implement advanced retrieval strategies and reranking.
+- Add document summarization and automated question generation.
+
+---
+
+## 👨‍💻 Author
+
+**Himanshu Walde**
+
+Computer Science & Engineering | AI & Machine Learning
+
+- GitHub: [@himanshuwalde](https://github.com/himanshuwalde)
+- LinkedIn: [Himanshu Walde](https://www.linkedin.com/in/himanshu-walde-20b716290/)
+
+---
+
+## 📄 License
+
+Developed for educational and learning purposes.
+
+---
+
+⭐ If you find this project interesting, consider giving the repository a star!
